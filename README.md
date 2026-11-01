@@ -1,6 +1,6 @@
 # ClearLane CPU Studio
 
-Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.26 (101 karts; Ink Hatcher)**.
+Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.27 (101 karts; Ink Hatcher, IPS32-only CPU export)**.
 
 ## Features
 
@@ -47,3 +47,6 @@ Use the **existing Netlify project**, not a second project. The browser stores p
 This site is a configuration editor, not proof of in-game compatibility. Ink Hatcher = logical BODY118, physical BODY62, `K_Inh` (101st kart). Its **CPU game-side hook is not yet verified**, so selecting it blocks CPU game ZIP export. New staged parts and custom team assignments likewise block unsafe installable export. The 101-card rebuilt `subsdk2` must **not** be replaced by older 100-card module outputs. Random colours/teammate assignment in-game remain unverified.
 
 No game executable or proprietary Mario Kart assets are included in this repository.
+
+## v0.27 experimental IPS-only CPU option
+The editor now accepts the owner's exact unchanged P828 main and P855 101-kart subsdk2, then emits two IPS32 files named by NSO Build ID. Both NSOs remain unchanged. When the user's CPU selections differ from the embedded 52x8 CLCP table, the second IPS contains that table and its CRC. Do not install the prior no-IPS paired test. Exact-source SHA pins and a confirmation prevent accidental use on modified builds. This is not an in-game validation of the main-to-sub SDK branch.
