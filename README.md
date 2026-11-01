@@ -1,6 +1,6 @@
 # ClearLane CPU Studio
 
-Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.23 (101 karts; Ink Hatcher)**.
+Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.24 (101 karts; Ink Hatcher)**.
 
 ## Features
 
@@ -9,6 +9,18 @@ Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site vers
 - VS Race and Battle Mode teammate assignments, stored separately.
 - Frame-size and CPU colour settings; all configuration and legacy JSON import/export run locally in the browser.
 - Designed for iPhone/Android and desktop; offline support with a service worker.
+
+## Architecture and safeguards
+
+- `index.html`: accessible mobile-first markup, including eight no-JavaScript fallback slots.
+- `app.js`: verified CPU profile editor, JSON format migration and export guards.
+- `styles.css`: responsive styling.
+- `sw.js`: network-first offline cache; bump version whenever static assets change.
+- `netlify.toml`: Netlify static deployment, security response headers and no-cache directives for updated files.
+
+**101-kart protection:** the P847 backend supports only 100-card test modules. The P855 101-kart Ink Hatcher module is not compatible. The experimental P847 ZIP requires a source-verified module and an explicit check that the installed game is still a P847 100-card setup. Ink Hatcher or staged future parts cannot be compiled to an installable CPU patch. No claim of verified CPU runtime or team/colour hooks is made.
+
+Tests for v0.24: JS parser (`node --check`), mobile and desktop browser runs, eight kart selectors (101 built-ins), legacy catalogue migration, local JSON/profile/team saves, fail-closed BODY118 compiler, independent Python ZIP/CRC verification. The live Netlify deployment itself is separate from these local tests.
 
 ## Build and deploy
 
