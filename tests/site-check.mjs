@@ -39,7 +39,7 @@ for(const m of html.matchAll(/<select aria-label="Kart (\d)" id="body-\d">([\s\S
 assert.deepEqual([...ids].sort(),[1,2,3,4,5,6,7,8]);
 assert.match(html,/id="runtime100Confirm"/);
 assert.match(css,/\.runtime100Notice\{/);
-assert.match(sw,/clearlane-cpu-studio-public-v024/);
+assert.match(sw,/clearlane-cpu-studio-public-v025/);
 assert.match(sw,/\.\/app\.js/);
 assert.match(sw,/\.\/styles\.css/);
 const m=JSON.parse(read('manifest.webmanifest'));
