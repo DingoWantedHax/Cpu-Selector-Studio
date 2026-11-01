@@ -1,6 +1,6 @@
 # ClearLane CPU Studio
 
-Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.25 (101 karts; Ink Hatcher)**.
+Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site version: **v0.26 (101 karts; Ink Hatcher)**.
 
 ## Features
 
@@ -23,6 +23,10 @@ Public, mobile-friendly Mario Kart 8 Deluxe CPU preset editor. Current site vers
 **101-kart protection:** the P847 backend supports only 100-card test modules. The P855 101-kart Ink Hatcher module is not compatible. The experimental P847 ZIP requires a source-verified module and an explicit check that the installed game is still a P847 100-card setup. Ink Hatcher or staged future parts cannot be compiled to an installable CPU patch. No claim of verified CPU runtime or team/colour hooks is made.
 
 Tests for v0.24: JS parser (`node --check`), mobile and desktop browser runs, eight kart selectors (101 built-ins), legacy catalogue migration, local JSON/profile/team saves, fail-closed BODY118 compiler, independent Python ZIP/CRC verification. The live Netlify deployment itself is separate from these local tests.
+
+## No-IPS 101-kart runtime experiment
+
+The private paired ExeFS test uses only the owner's original P828 `main` and P855 101-card `subsdk2`; no IPS files. Both files must be installed together initially. The website can then compile 52 drivers x 8 presets into a new `subsdk2`, **only when paired with the CPU-enabled `main`**. The website requires the exact original backup `subsdk2` for each rebuild. Never replace a different or newer kart expansion. Random CPU colours and custom teams are still configuration-only. The no-IPS website exporter does not apply frame-size overrides. No live race verification has been completed. Always preserve both original ExeFS files for rollback.
 
 ## Build and deploy
 
