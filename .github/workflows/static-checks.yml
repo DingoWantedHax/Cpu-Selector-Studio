@@ -1,0 +1,19 @@
+name: CPU Studio static safety checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Check roster, mobile fallback and export guards
+        run: node tests/site-check.mjs
