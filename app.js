@@ -675,7 +675,7 @@ async function compile101NoIpsSubsdk2(source){
  for(const seg of proof.segs)out.set(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),seg.hash);
  // Full segment integrity and 101-card registry preserved, independently of profile bytes.
  for(const seg of proof.segs)if(!bytesEqual(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),out.slice(seg.hash,seg.hash+32)))throw Error('NSO SHA mismatch after CPU compilation.');
- verify100CardRegistry(out,text); // 101 cards are checked separately using their expected P855 witnesses.
+ // This is the 101-card P855 registry. Use only its pinned 101-card opcode witnesses below.
  for(const [rva,word] of [[0x3cdc,0xe35c0065],[0x3ce0,0x83a0c065],[0x3e6c,0xe35b0065],[0x3e70,0x83a0b065]]){
   if(readLE(out,text.fo+rva)!==word)throw Error('101-card menu bound modified unexpectedly.');
  }
