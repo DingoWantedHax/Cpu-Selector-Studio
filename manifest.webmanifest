@@ -1,0 +1,10 @@
+{
+  "name": "ClearLane CPU Studio",
+  "short_name": "ClearLane CPU",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1422",
+  "theme_color": "#0b1422",
+  "description": "101-kart CPU selection and VS/Battle profiles. Ink Hatcher CPU game export pending."
+}
