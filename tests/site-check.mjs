@@ -55,5 +55,5 @@ assert.match(read('netlify.toml'),/Content-Security-Policy/);
 console.log('PASS: 101 karts, 52 drivers, eight 101-choice static slots, exports guarded, PWA cache and security config');
 
 assert.match(js,/native101Profile/);
-assert.match(js,/compile101NoIpsSubsdk2/);
-assert.match(html,/id="noips101Export"/);
+assert.match(js,/build101IPSOnly/);
+assert.match(html,/id="ips101Export"/);
