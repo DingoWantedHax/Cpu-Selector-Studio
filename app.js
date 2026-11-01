@@ -631,9 +631,12 @@ $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f
  notifyUnified('Imported CPU profiles, part catalogue, frames, colours and any included VS/Battle teammate settings. Game team hooks remain unimplemented.');
  }catch(e){notifyUnified('JSON import refused; previous configuration preserved: '+e.message);}};
 restoreExtra();restoreTeams();renderColours();renderFrames();renderRandomGate();renderTeams();updateRuntimeGate();
-// v0.26: NO IPS CPU101 profile compiler for the owner's exact P855 subsdk2.
-// The paired, already patched P828 main is supplied separately from the public site.
-// No game binary, personal profile or licensed asset is hosted by GitHub.
+// v0.27: IPS32-only for the owner's EXACT P828 main and P855 101-kart subsdk2.
+// The upload stays local; no game executable is stored in the site's repository.
+const IPS101_MAIN_SHA='d378ddaed07d15520f0f50666660e6344ef88f381ea10e597f6e843c9d76041f';
+const IPS101_MAIN_BID='6A85262F21B903649BD7C62628D26E43';
+const IPS101_SUB_BID='B1A48B30D5A66680E6FE2CD038F3A4BC0AD5E6F8F07E5A62F8E5E489E0C19D22';
+const IPS101_PATCH_DIR='atmosphere/exefs_patches/ClearLane_CPU101_P859_EXPERIMENTAL/';
 function native101Profile(){
  validate(profiles);
  const payload=new Uint8Array(1248).fill(255);
@@ -641,58 +644,73 @@ function native101Profile(){
   const p=profiles[d];if(p.mode==='nintendo')continue;
   for(let slot=0;slot<8;slot++){
    let b=p.bodies[slot],t=p.tires[slot],g=p.gliders[slot];
-   if(!Number.isSafeInteger(b)||!Number.isSafeInteger(t)||!Number.isSafeInteger(g))throw Error('Invalid CPU part ID.');
-   // Native physical BODY46 / 63 are unmapped. 103..118 are compact logical aliases for 47..62.
+   if(!Number.isSafeInteger(b)||!Number.isSafeInteger(t)||!Number.isSafeInteger(g))throw Error('Invalid CPU part ID');
    if(b>=0&&b<=45){}else if(b>=64&&b<=102){}else if(b>=103&&b<=118)b-=56;
-   else throw Error('BODY'+b+' is not registered in the exact 101-kart CPU module.');
-   if(t<0||t>21||g<0||g>14)throw Error('Tyre or glider not registered in existing game tables.');
+   else throw Error('BODY'+b+' is not registered in this 101-kart CPU module');
+   if(t<0||t>21||g<0||g>14)throw Error('Tyre or glider does not have a verified native CPU record');
    payload.set([b,t,g],(d*8+slot)*3);
   }
  }
  const block=new Uint8Array(1264);
  block.set([67,76,67,80,1,52,8,3,224,4,0,0],0);
- block.set(u32le(crc32(payload)),12);block.set(payload,16);
+ block.set(u32le(crc32(payload)),12);
+ block.set(payload,16);
  validateProfileBytes(block);
  return block;
 }
-async function compile101NoIpsSubsdk2(source){
- if(await shaHex(source)!==OWNER_101_SUBSDK2_SHA)throw Error('Load the ORIGINAL exact P855-lineage 101-kart subsdk2 backup, not an already modified module.');
- const proof=await inspect101Readonly(source);
- if(proof.profileFile!==0x5704)throw Error('Unsupported CLCP layout.');
- const text=proof.segs[0],out=source.slice(),low=text.fo+0x3f64,high=text.fo+0x3f74;
- if(readLE(out,low)!==0xe350002d||readLE(out,high)!==0xe3500063)throw Error('Unexpected native CPU BODY bounds.');
- setLE(out,low,0xe350003e); // physical 47..62 becomes selectable (Ink Hatcher physical62).
- setLE(out,high,0xe3500066); // other existing native 100..102 remain available.
- const profile=native101Profile();out.set(profile,proof.profileFile);
- const allowed=new Uint8Array(source.length);
- allowed.fill(1,low,low+4);allowed.fill(1,high,high+4);allowed.fill(1,proof.profileFile,proof.profileFile+1264);
- for(let i=0;i<source.length;i++)if(source[i]!==out[i]&&!allowed[i])throw Error('Protected 101-kart module changed outside CPU helper/profile.');
- for(const seg of proof.segs)out.set(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),seg.hash);
- // Full segment integrity and 101-card registry preserved, independently of profile bytes.
- for(const seg of proof.segs)if(!bytesEqual(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),out.slice(seg.hash,seg.hash+32)))throw Error('NSO SHA mismatch after CPU compilation.');
- // This is the 101-card P855 registry. Use only its pinned 101-card opcode witnesses below.
- for(const [rva,word] of [[0x3cdc,0xe35c0065],[0x3ce0,0x83a0c065],[0x3e6c,0xe35b0065],[0x3e70,0x83a0b065]]){
-  if(readLE(out,text.fo+rva)!==word)throw Error('101-card menu bound modified unexpectedly.');
+function buildCPU101IPS32(rows){
+ const entries=rows.slice().sort((a,b)=>a[0]-b[0]);
+ const data=[73,80,83,51,50];let last=0x100;
+ for(const [addr,bytes] of entries){
+  if(!Number.isSafeInteger(addr)||addr<0x100||addr<last||!(bytes instanceof Uint8Array)||bytes.length===0||bytes.length>65535)throw Error('Invalid/overlapping IPS32 record');
+  last=addr+bytes.length;
+  data.push(...u32be(addr),...u16be(bytes.length),...bytes);
  }
- if(!bytesEqual(out.slice(proof.profileFile,proof.profileFile+1264),profile))throw Error('CPU profile roundtrip failed.');
- return out;
+ data.push(69,69,79,70);
+ return Uint8Array.from(data);
 }
-$('noips101Export').onclick=async()=>{
+async function build101IPSOnly(main,sub){
+ if(await shaHex(main)!==IPS101_MAIN_SHA)throw Error('main SHA mismatch. Upload your unchanged P828 main from the original ExeFS, not the no-IPS patched test.');
+ if(!loadedModule||!activeVerified?.readonly||activeVerified.rosterCount!==101||sub!==loadedModule)throw Error('Load the exact original 101-kart subsdk2 using the file chooser above.');
+ if(await shaHex(sub)!==OWNER_101_SUBSDK2_SHA)throw Error('P855 101-kart subsdk2 source mismatch');
+ const bid=(arr)=>Array.from(arr.slice(0x40,0x60),c=>c.toString(16).padStart(2,'0')).join('').toUpperCase().replace(/0+$/,'');
+ if(bid(main)!==IPS101_MAIN_BID||bid(sub)!==IPS101_SUB_BID)throw Error('Unexpected NSO Build ID');
+ const p=native101Profile();
+ const original=sub.slice(0x5704,0x5704+1264);
+ validateProfileBytes(original);
+ const mainRows=[[0x54816c,Uint8Array.from([0xa4,0xc3,0x3f,0xeb])],[0x54821c,Uint8Array.from([0x78,0xc3,0x3f,0xeb])]];
+ const subRows=[[0x4064,Uint8Array.from([0x3e,0x00,0x50,0xe3])],[0x4074,Uint8Array.from([0x66,0x00,0x50,0xe3])]];
+ if(!bytesEqual(p,original))subRows.push([0x5704,p]);
+ for(const [at,old] of [[0x3f64,0xe350002d],[0x3f74,0xe3500063]])if(readLE(sub,0x100+at)!==old)throw Error('101-kart helper instruction mismatch at 0x'+at.toString(16));
+ if(!(main[0]===78&&main[1]===83&&main[2]===79&&main[3]===48))throw Error('Invalid main NSO0');
+ const mip=buildCPU101IPS32(mainRows),sip=buildCPU101IPS32(subRows);
+ // Repeat every emitted binary record through an independent parser to catch encoding mistakes.
+ for(const [blob,expected] of [[mip,mainRows],[sip,subRows]]){
+  const r=parseIPS(blob);
+  if(r.format!=='IPS32'||r.records.length!==expected.length)throw Error('IPS32 output does not round-trip');
+  for(let i=0;i<expected.length;i++)if(r.records[i].offset!==expected[i][0]||!bytesEqual(r.records[i].data,expected[i][1]))throw Error('IPS32 record changed after encoding');
+ }
+ return {mip,sip,profileChanged:!bytesEqual(p,original)};
+}
+$('ips101Export').onclick=async()=>{
+ const state=$('ips101Status');
  try{
-  if(!loadedModule||!activeVerified?.readonly||activeVerified.rosterCount!==101)throw Error('Load your ORIGINAL P855 101-kart subsdk2 in the file chooser above.');
-  if(!$('noips101InstalledMain').checked)throw Error('Install the paired, direct-patched P828 main from the separate no-IPS 101-kart MTP test first. Never use this subsdk2 with your original unhooked main.');
-  if(COLOUR_NAMES.some(([id])=>colours[id]))throw Error('Randomised CPU colours are not implemented. Disable random colours before compiling.');
-  if(teamPending())throw Error('Custom VS/Battle teams require an unimplemented game hook. Set team choices to Nintendo defaults.');
-  const data=await compile101NoIpsSubsdk2(loadedModule),hash=await shaHex(data),enc=new TextEncoder();
-  const readme='ClearLane CPU101 v0.26 NO-IPS subSDK2-only update. EXPERIMENTAL, offline game test needed. Works ONLY paired with the exact P828 main previously patched to BL the CPU helper at +0x54806C and +0x54811C. This ZIP deliberately does NOT include main or IPS files. Source P855 subsdk2 SHA256: '+OWNER_101_SUBSDK2_SHA+'\\nModified subsdk2 SHA256: '+hash+'\\nBackup your current files and install the modified subsdk2 via MTP while leaving the already patched main installed. Preserve all other kart/tyre/glider and SZS assets. No race, colours, team assignment or frame changes guaranteed. Restore original main AND subsdk2 together if any failure. Frame-size settings are NOT applied by this subsdk2-only ZIP.\\n';
+  if(COLOUR_NAMES.some(([id])=>colours[id]))throw Error('Random CPU colour hooks are not implemented. Disable those toggles for a CPU export.');
+  if(teamPending())throw Error('Custom VS/Battle teams have no game hook yet. Set them to Nintendo defaults.');
+  if(!$('ips101BaselineConfirm').checked)throw Error('Confirm that you have the original unchanged ExeFS and will not stack the previous no-IPS paired test.');
+  const file=$('ips101MainFile').files?.[0];if(!file)throw Error('Upload your unchanged P828 main to verify the source SHA before creating IPS patches.');
+  const main=new Uint8Array(await file.arrayBuffer());
+  const {mip,sip,profileChanged}=await build101IPSOnly(main,loadedModule);
+  const instructions='ClearLane CPU101 P859 IPS32-only EXPERIMENTAL / MK8DX 3.0.3. Installs two IPS files, one for exact P828 main, one for P855 101-kart subsdk2. DO NOT install the old no-IPS patched main or subsdk2 at the same time. Both existing original ExeFS files stay untouched. Place the atmosphere folder at your Switch SD root through MTP, fully close the game and test one offline VS race. No CPU team/colour hooks, 23rd tyre or extra gliders. CPU direct BL to subsdk2 target has NOT been verified live on your setup. If crash/wrong karts, close the game and delete ONLY atmosphere/exefs_patches/ClearLane_CPU101_P859_EXPERIMENTAL. Original 416 CPU records '+(profileChanged?'are replaced at load by your currently edited 52x8 profiles through the IPS overlay.':'are retained byte-for-byte; only the helper limits and main hooks are patched.')+'\n';
+  const enc=new TextEncoder();
   const zip=zipPair([
-   {filename:'atmosphere/contents/0100152000022000/exefs/subsdk2',data},
-   {filename:'READ_FIRST_NO_IPS.txt',data:enc.encode(readme)},
-   {filename:'CPU_Profile_Backup.json',data:enc.encode(JSON.stringify(allJSON(),null,2))}
+    {filename:IPS101_PATCH_DIR+IPS101_MAIN_BID+'.ips',data:mip},
+    {filename:IPS101_PATCH_DIR+IPS101_SUB_BID+'.ips',data:sip},
+    {filename:'READ_FIRST_CPU101_IPS_ONLY.txt',data:enc.encode(instructions)}
   ]);
-  download('ClearLane_CPU101_No_IPS_SubSDK2_Update_v026.zip',zip,'application/zip');
-  $('noips101Status').textContent='Compiled 101-kart CPU loadouts into subsdk2. No IPS. Keep the already patched main installed; offline race test still required.';
- }catch(e){$('noips101Status').textContent='Export refused: '+e.message;}
+  download('ClearLane_CPU101_P859_IPS_Only_v027.zip',zip,'application/zip');
+  state.textContent='Exported two IPS32 files for the exact P828/P855 modules. No main/subsdk2 replacements. '+(profileChanged?'The edited 416-combination table was included.':'Your original 416 combinations remain unchanged.')+' Offline race test still required.';
+ }catch(e){state.textContent='IPS export refused: '+e.message;}
 };
 $('mobileInitStatus').hidden=true;
 })();
