@@ -686,7 +686,7 @@ async function build101IPSOnly(main,sub){
  const mip=buildCPU101IPS32(mainRows),sip=buildCPU101IPS32(subRows);
  // Repeat every emitted binary record through an independent parser to catch encoding mistakes.
  for(const [blob,expected] of [[mip,mainRows],[sip,subRows]]){
-  const r=parseIPS(blob);
+  const r=parseIps(blob);
   if(r.format!=='IPS32'||r.records.length!==expected.length)throw Error('IPS32 output does not round-trip');
   for(let i=0;i<expected.length;i++)if(r.records[i].offset!==expected[i][0]||!bytesEqual(r.records[i].data,expected[i][1]))throw Error('IPS32 record changed after encoding');
  }
