@@ -631,11 +631,6 @@ $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f
  notifyUnified('Imported CPU profiles, part catalogue, frames, colours and any included VS/Battle teammate settings. Game team hooks remain unimplemented.');
  }catch(e){notifyUnified('JSON import refused; previous configuration preserved: '+e.message);}};
 restoreExtra();restoreTeams();renderColours();renderFrames();renderRandomGate();renderTeams();updateRuntimeGate();
-$('mobileInitStatus').hidden=true;
-})();
-
-
-
 // v0.26: NO IPS CPU101 profile compiler for the owner's exact P855 subsdk2.
 // The paired, already patched P828 main is supplied separately from the public site.
 // No game binary, personal profile or licensed asset is hosted by GitHub.
@@ -699,6 +694,10 @@ $('noips101Export').onclick=async()=>{
   $('noips101Status').textContent='Compiled 101-kart CPU loadouts into subsdk2. No IPS. Keep the already patched main installed; offline race test still required.';
  }catch(e){$('noips101Status').textContent='Export refused: '+e.message;}
 };
+$('mobileInitStatus').hidden=true;
+})();
+
+
 
 // Register the PWA after the UI has loaded; network-first caching prevents stale deployments.
 if('serviceWorker' in navigator && location.protocol === 'https:') {window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));}
