@@ -634,5 +634,71 @@ restoreExtra();restoreTeams();renderColours();renderFrames();renderRandomGate();
 $('mobileInitStatus').hidden=true;
 })();
 
+
+
+// v0.26: NO IPS CPU101 profile compiler for the owner's exact P855 subsdk2.
+// The paired, already patched P828 main is supplied separately from the public site.
+// No game binary, personal profile or licensed asset is hosted by GitHub.
+function native101Profile(){
+ validate(profiles);
+ const payload=new Uint8Array(1248).fill(255);
+ for(let d=0;d<52;d++){
+  const p=profiles[d];if(p.mode==='nintendo')continue;
+  for(let slot=0;slot<8;slot++){
+   let b=p.bodies[slot],t=p.tires[slot],g=p.gliders[slot];
+   if(!Number.isSafeInteger(b)||!Number.isSafeInteger(t)||!Number.isSafeInteger(g))throw Error('Invalid CPU part ID.');
+   // Native physical BODY46 / 63 are unmapped. 103..118 are compact logical aliases for 47..62.
+   if(b>=0&&b<=45){}else if(b>=64&&b<=102){}else if(b>=103&&b<=118)b-=56;
+   else throw Error('BODY'+b+' is not registered in the exact 101-kart CPU module.');
+   if(t<0||t>21||g<0||g>14)throw Error('Tyre or glider not registered in existing game tables.');
+   payload.set([b,t,g],(d*8+slot)*3);
+  }
+ }
+ const block=new Uint8Array(1264);
+ block.set([67,76,67,80,1,52,8,3,224,4,0,0],0);
+ block.set(u32le(crc32(payload)),12);block.set(payload,16);
+ validateProfileBytes(block);
+ return block;
+}
+async function compile101NoIpsSubsdk2(source){
+ if(await shaHex(source)!==OWNER_101_SUBSDK2_SHA)throw Error('Load the ORIGINAL exact P855-lineage 101-kart subsdk2 backup, not an already modified module.');
+ const proof=await inspect101Readonly(source);
+ if(proof.profileFile!==0x5704)throw Error('Unsupported CLCP layout.');
+ const text=proof.segs[0],out=source.slice(),low=text.fo+0x3f64,high=text.fo+0x3f74;
+ if(readLE(out,low)!==0xe350002d||readLE(out,high)!==0xe3500063)throw Error('Unexpected native CPU BODY bounds.');
+ setLE(out,low,0xe350003e); // physical 47..62 becomes selectable (Ink Hatcher physical62).
+ setLE(out,high,0xe3500066); // other existing native 100..102 remain available.
+ const profile=native101Profile();out.set(profile,proof.profileFile);
+ const allowed=new Uint8Array(source.length);
+ allowed.fill(1,low,low+4);allowed.fill(1,high,high+4);allowed.fill(1,proof.profileFile,proof.profileFile+1264);
+ for(let i=0;i<source.length;i++)if(source[i]!==out[i]&&!allowed[i])throw Error('Protected 101-kart module changed outside CPU helper/profile.');
+ for(const seg of proof.segs)out.set(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),seg.hash);
+ // Full segment integrity and 101-card registry preserved, independently of profile bytes.
+ for(const seg of proof.segs)if(!bytesEqual(await sha256Bytes(out.slice(seg.fo,seg.fo+seg.size)),out.slice(seg.hash,seg.hash+32)))throw Error('NSO SHA mismatch after CPU compilation.');
+ verify100CardRegistry(out,text); // 101 cards are checked separately using their expected P855 witnesses.
+ for(const [rva,word] of [[0x3cdc,0xe35c0065],[0x3ce0,0x83a0c065],[0x3e6c,0xe35b0065],[0x3e70,0x83a0b065]]){
+  if(readLE(out,text.fo+rva)!==word)throw Error('101-card menu bound modified unexpectedly.');
+ }
+ if(!bytesEqual(out.slice(proof.profileFile,proof.profileFile+1264),profile))throw Error('CPU profile roundtrip failed.');
+ return out;
+}
+$('noips101Export').onclick=async()=>{
+ try{
+  if(!loadedModule||!activeVerified?.readonly||activeVerified.rosterCount!==101)throw Error('Load your ORIGINAL P855 101-kart subsdk2 in the file chooser above.');
+  if(!$('noips101InstalledMain').checked)throw Error('Install the paired, direct-patched P828 main from the separate no-IPS 101-kart MTP test first. Never use this subsdk2 with your original unhooked main.');
+  if(COLOUR_NAMES.some(([id])=>colours[id]))throw Error('Randomised CPU colours are not implemented. Disable random colours before compiling.');
+  if(teamPending())throw Error('Custom VS/Battle teams require an unimplemented game hook. Set team choices to Nintendo defaults.');
+  const data=await compile101NoIpsSubsdk2(loadedModule),hash=await shaHex(data),enc=new TextEncoder();
+  const readme='ClearLane CPU101 v0.26 NO-IPS subSDK2-only update. EXPERIMENTAL, offline game test needed. Works ONLY paired with the exact P828 main previously patched to BL the CPU helper at +0x54806C and +0x54811C. This ZIP deliberately does NOT include main or IPS files. Source P855 subsdk2 SHA256: '+OWNER_101_SUBSDK2_SHA+'\\nModified subsdk2 SHA256: '+hash+'\\nBackup your current files and install the modified subsdk2 via MTP while leaving the already patched main installed. Preserve all other kart/tyre/glider and SZS assets. No race, colours, team assignment or frame changes guaranteed. Restore original main AND subsdk2 together if any failure. Frame-size settings are NOT applied by this subsdk2-only ZIP.\\n';
+  const zip=zipPair([
+   {filename:'atmosphere/contents/0100152000022000/exefs/subsdk2',data},
+   {filename:'READ_FIRST_NO_IPS.txt',data:enc.encode(readme)},
+   {filename:'CPU_Profile_Backup.json',data:enc.encode(JSON.stringify(allJSON(),null,2))}
+  ]);
+  download('ClearLane_CPU101_No_IPS_SubSDK2_Update_v026.zip',zip,'application/zip');
+  $('noips101Status').textContent='Compiled 101-kart CPU loadouts into subsdk2. No IPS. Keep the already patched main installed; offline race test still required.';
+ }catch(e){$('noips101Status').textContent='Export refused: '+e.message;}
+};
+
 // Register the PWA after the UI has loaded; network-first caching prevents stale deployments.
 if('serviceWorker' in navigator && location.protocol === 'https:') {window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));}
