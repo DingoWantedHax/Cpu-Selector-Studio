@@ -1,4 +1,4 @@
-const CACHE='clearlane-cpu-studio-public-v026';
+const CACHE='clearlane-cpu-studio-public-v027';
 const FILES=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
 self.addEventListener('install', e => {e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate', e => {e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&k.startsWith('clearlane-cpu-studio-')).map(k=>caches.delete(k)))),self.clients.claim()]));});
