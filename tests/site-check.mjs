@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=n=>fs.readFileSync(path.join(root,n),'utf8');
 const html=read('index.html'),js=read('app.js'),css=read('styles.css'),sw=read('sw.js');
-assert.match(html,/Public Web Edition · v0\.25/);
+assert.match(html,/Public Web Edition · v0\.26/);
 assert.match(html,/<script src="\.\/app\.js"><\/script>/);
 assert.match(html,/<link rel="stylesheet" href="\.\/styles\.css">/);
 assert.doesNotMatch(html,/<script>\s*[\s\S]*?<\/script>/);
@@ -39,7 +39,7 @@ for(const m of html.matchAll(/<select aria-label="Kart (\d)" id="body-\d">([\s\S
 assert.deepEqual([...ids].sort(),[1,2,3,4,5,6,7,8]);
 assert.match(html,/id="runtime100Confirm"/);
 assert.match(css,/\.runtime100Notice\{/);
-assert.match(sw,/clearlane-cpu-studio-public-v025/);
+assert.match(sw,/clearlane-cpu-studio-public-v026/);
 assert.match(sw,/\.\/app\.js/);
 assert.match(sw,/\.\/styles\.css/);
 const m=JSON.parse(read('manifest.webmanifest'));
@@ -47,3 +47,7 @@ assert.equal(m.name,'ClearLane CPU Studio');
 for(const f of ['index.html','app.js','styles.css','sw.js','manifest.webmanifest','netlify.toml'])assert(fs.existsSync(path.join(root,f)),f);
 assert.match(read('netlify.toml'),/Content-Security-Policy/);
 console.log('PASS: 101 karts, 52 drivers, eight 101-choice static slots, exports guarded, PWA cache and security config');
+
+assert.match(js,/native101Profile/);
+assert.match(js,/compile101NoIpsSubsdk2/);
+assert.match(html,/id="noips101Export"/);
