@@ -12,6 +12,8 @@ assert.doesNotMatch(html,/<script>\s*[\s\S]*?<\/script>/);
 assert.match(js,/runtime100Confirm/);
 assert.match(js,/OWNER_101_SUBSDK2_SHA/);
 assert.match(js,/build101IPSOnly/);
+assert.match(js,/const r=parseIps\(blob\)/);
+assert.doesNotMatch(js,/parseIPS\(blob\)/);
 assert.match(js,/IPS101_MAIN_BID/);
 assert.match(js,/IPS101_SUB_BID/);
 assert.match(js,/ips101BaselineConfirm/);
